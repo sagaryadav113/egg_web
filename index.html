@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ASSET Precision Counter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; 
+            margin: 0; height: 100vh; width: 100vw; overflow: hidden; display: flex; flex-direction: column;
+        }
+        .sidebar { 
+            background-color: #1e293b; padding: 0.75rem; z-index: 1000; 
+            border-bottom: 1px solid #334155; flex-shrink: 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .workzone { 
+            flex-grow: 1; position: relative; overflow: auto; 
+            background-color: #020617; display: block;
+        }
+        #eggCanvas { 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); background-color: #000; 
+            touch-action: none; transform-origin: top left; display: block;
+        }
+        @media (min-width: 768px) {
+            body { flex-direction: row; }
+            .sidebar { width: 340px; height: 100vh; border-right: 1px solid #334155; border-bottom: none; overflow-y: auto; padding: 1.5rem; }
+            .workzone { height: 100vh; }
+        }
+        .stat-box { background: #334155; padding: 0.4rem; border-radius: 0.5rem; border: 1px solid #475569; text-align: center; }
+        .nav-btn { background: #475569; width: 44px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: white; transition: background 0.2s; }
+        .nav-btn:active { background: #6366f1; transform: scale(0.9); }
+        .btn-active { outline: 3px solid #6366f1; outline-offset: 2px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar flex flex-col gap-4">
+        <h1 class="text-lg font-bold text-white border-b border-slate-700 pb-2 hidden md:block text-center">ASSET Counter</h1>
+        
+        <div class="grid grid-cols-3 gap-2">
+            <div class="stat-box"><p class="text-[9px] uppercase text-slate-400">Total</p><p class="text-lg font-bold" id="totalCount">0</p></div>
+            <div class="stat-box"><p class="text-[9px] uppercase text-green-400">Live</p><p class="text-lg font-bold" id="liveCount">0</p></div>
+            <div class="stat-box"><p class="text-[9px] uppercase text-red-400">Dead</p><p class="text-lg font-bold" id="deadCount">0</p></div>
+        </div>
+
+        <div class="flex gap-2">
+            <button onclick="setMode('live')" id="btnLive" class="flex-1 py-3 rounded-lg font-bold text-xs bg-green-600 btn-active uppercase text-white shadow-lg">Live</button>
+            <button onclick="setMode('dead')" id="btnDead" class="flex-1 py-3 rounded-lg font-bold text-xs bg-slate-700 uppercase text-white shadow-lg">Dead</button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 border-t border-slate-700 pt-3">
+            <div>
+                <p class="text-[10px] uppercase mb-1 font-bold text-slate-400 text-center">Dot Size: <span id="sizeVal">12</span></p>
+                <input type="range" id="sizeSlider" min="2" max="40" value="12" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500" oninput="draw()">
+            </div>
+            <div>
+                <p class="text-[10px] uppercase mb-1 font-bold text-slate-400 text-center">Border: <span id="borderVal">3</span></p>
+                <input type="range" id="borderSlider" min="0" max="10" value="3" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-slate-300" oninput="draw()">
+            </div>
+        </div>
+
+        <div class="flex md:flex-col gap-4 items-center justify-between border-t border-slate-700 pt-3">
+            <div class="flex flex-col items-center">
+                <p class="text-[10px] uppercase mb-1 font-bold text-slate-400 tracking-tight">Zoom: <span id="zoomVal" class="text-white">100%</span></p>
+                <div class="flex gap-1">
+                    <button onclick="adjustZoom(0.2)" class="px-4 py-2 bg-slate-700 rounded-lg font-bold text-xl">+</button>
+                    <button onclick="adjustZoom(-0.2)" class="px-4 py-2 bg-slate-700 rounded-lg font-bold text-xl">-</button>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center gap-1">
+                <button onclick="pan(0, -80)" class="nav-btn">▲</button>
+                <div class="flex gap-1">
+                    <button onclick="pan(-80, 0)" class="nav-btn">◀</button>
+                    <button onclick="resetView()" class="nav-btn text-[10px] bg-slate-800 uppercase font-bold">Rst</button>
+                    <button onclick="pan(80, 0)" class="nav-btn">▶</button>
+                </div>
+                <button onclick="pan(0, 80)" class="nav-btn">▼</button>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-2 mt-auto">
+            <div class="flex gap-2">
+                <button onclick="undo()" class="flex-1 py-2 bg-slate-600 rounded text-xs font-bold uppercase italic text-white">Undo</button>
+                <button onclick="saveImage()" class="flex-1 py-2 bg-indigo-600 rounded text-xs font-bold uppercase text-white">Save</button>
+            </div>
+            <button onclick="clearAll()" class="w-full py-2 bg-red-900/30 hover:bg-red-700 border border-red-500 rounded text-[10px] font-bold uppercase text-red-200 transition-colors">
+                Clear All Points
+            </button>
+        </div>
+        
+        <input type="file" id="imageInput" class="block w-full text-[10px] text-slate-500 file:mr-2 file:bg-slate-600 file:text-white file:rounded-full file:border-0 file:px-2 cursor-pointer">
+    </div>
+
+    <div class="workzone" id="workzone">
+        <canvas id="eggCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('eggCanvas');
+        const workzone = document.getElementById('workzone');
+        const ctx = canvas.getContext('2d');
+        let points = [];
+        let mode = 'live';
+        let img = new Image();
+        let scale = 1.0;
+        let isPanning = false;
+        let initialDist = 0;
+        let lastTouchX = 0, lastTouchY = 0;
+
+        document.getElementById('imageInput').onchange = function(e) {
+            const reader = new FileReader();
+            reader.onload = (event) => { img.src = event.target.result; };
+            reader.readAsDataURL(e.target.files[0]);
+        };
+
+        img.onload = () => { resetView(); draw(); };
+
+        function adjustZoom(delta) { 
+            scale = Math.min(Math.max(0.1, scale + delta), 5.0); 
+            updateDisplay(); 
+        }
+
+        function pan(dx, dy) { workzone.scrollLeft += dx; workzone.scrollTop += dy; }
+
+        function resetView() {
+            scale = 1.0;
+            if(img.src) {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                updateDisplay();
+            }
+            workzone.scrollLeft = 0;
+            workzone.scrollTop = 0;
+        }
+
+        function updateDisplay() {
+            if (!img.src) return;
+            canvas.style.width = (img.width * scale) + "px";
+            canvas.style.height = (img.height * scale) + "px";
+            document.getElementById('zoomVal').innerText = Math.round(scale * 100) + "%";
+            draw();
+        }
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('btnLive').className = m === 'live' ? 'flex-1 py-3 rounded-lg font-bold text-xs bg-green-600 btn-active uppercase shadow-lg' : 'flex-1 py-3 rounded-lg font-bold text-xs bg-slate-700 uppercase shadow-lg';
+            document.getElementById('btnDead').className = m === 'dead' ? 'flex-1 py-3 rounded-lg font-bold text-xs bg-red-600 btn-active uppercase shadow-lg' : 'flex-1 py-3 rounded-lg font-bold text-xs bg-slate-700 uppercase shadow-lg';
+        }
+
+        function clearAll() {
+            if (points.length === 0) return;
+            if (confirm("Clear ALL marked points?")) { points = []; draw(); }
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            handleInput(e.clientX, e.clientY);
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                isPanning = true;
+                initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                lastTouchX = (e.touches[0].pageX + e.touches[1].pageX) / 2;
+                lastTouchY = (e.touches[0].pageY + e.touches[1].pageY) / 2;
+            } else if (e.touches.length === 1) {
+                e.preventDefault(); 
+                handleInput(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, {passive: false});
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && isPanning) {
+                e.preventDefault();
+                const currentDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                scale = Math.min(Math.max(0.1, scale * (currentDist / initialDist)), 5.0);
+                updateDisplay();
+                initialDist = currentDist;
+                const currentX = (e.touches[0].pageX + e.touches[1].pageX) / 2;
+                const currentY = (e.touches[0].pageY + e.touches[1].pageY) / 2;
+                pan(-(currentX - lastTouchX), -(currentY - lastTouchY));
+                lastTouchX = currentX; lastTouchY = currentY;
+            }
+        }, {passive: false});
+
+        canvas.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) isPanning = false;
+        });
+
+        function handleInput(clientX, clientY) {
+            if (!img.src || isPanning) return;
+            const rect = canvas.getBoundingClientRect();
+            points.push({ 
+                x: (clientX - rect.left) / scale, 
+                y: (clientY - rect.top) / scale, 
+                type: mode 
+            });
+            draw();
+        }
+
+        function undo() { points.pop(); draw(); }
+
+        function draw() {
+            if (!img.src) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+
+            const dotSize = document.getElementById('sizeSlider').value;
+            const borderSize = document.getElementById('borderSlider').value;
+            document.getElementById('sizeVal').innerText = dotSize;
+            document.getElementById('borderVal').innerText = borderSize;
+
+            points.forEach(p => {
+                ctx.beginPath(); 
+                ctx.arc(p.x, p.y, parseInt(dotSize), 0, Math.PI * 2);
+                ctx.fillStyle = p.type === 'live' ? '#10b981' : '#ef4444'; 
+                ctx.fill();
+                if (borderSize > 0) {
+                    ctx.strokeStyle = "white"; 
+                    ctx.lineWidth = parseInt(borderSize); 
+                    ctx.stroke();
+                }
+            });
+
+            const live = points.filter(p => p.type === 'live').length;
+            const dead = points.filter(p => p.type === 'dead').length;
+            document.getElementById('liveCount').innerText = live;
+            document.getElementById('deadCount').innerText = dead;
+            document.getElementById('totalCount').innerText = points.length;
+        }
+
+        function saveImage() { 
+            if(!img.src) return; 
+            const link = document.createElement('a'); 
+            link.download = 'ASSET_counted_eggs.png'; 
+            link.href = canvas.toDataURL(); 
+            link.click(); 
+        }
+
+        window.addEventListener('keydown', (e) => {
+            const k = e.key;
+            if (k.toLowerCase() === 'l') setMode('live');
+            if (k.toLowerCase() === 'd') setMode('dead');
+            if (k.toLowerCase() === 'u') undo();
+            if (k.toLowerCase() === 's') saveImage();
+            if (k === 'ArrowUp') pan(0, -60); if (k === 'ArrowDown') pan(0, 60);
+            if (k === 'ArrowLeft') pan(-60, 0); if (k === 'ArrowRight') pan(60, 0);
+        });
+    </script>
+</body>
+</html>
