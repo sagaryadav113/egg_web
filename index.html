@@ -1,3 +1,8 @@
+from flask import Flask, render_template_string
+
+app = Flask(__name__)
+
+HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,37 +11,141 @@
     <title>ASSET Precision Counter</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { 
-            background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; 
-            margin: 0; height: 100vh; width: 100vw; overflow: hidden; display: flex; flex-direction: column;
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
-        .sidebar { 
-            background-color: #1e293b; padding: 0.75rem; z-index: 1000; 
-            border-bottom: 1px solid #334155; flex-shrink: 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        .sidebar {
+            background-color: #1e293b;
+            padding: 0.75rem;
+            z-index: 1000;
+            border-bottom: 1px solid #334155;
+            flex-shrink: 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
         }
-        .workzone { 
-            flex-grow: 1; position: relative; overflow: auto; 
-            background-color: #020617; display: block;
+        .workzone {
+            flex-grow: 1;
+            position: relative;
+            overflow: auto;
+            background-color: #020617;
+            display: block;
         }
-        #eggCanvas { 
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); background-color: #000; 
-            touch-action: none; transform-origin: top left; display: block;
+        #eggCanvas {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            background-color: #000;
+            touch-action: none;
+            transform-origin: top left;
+            display: block;
         }
         @media (min-width: 768px) {
             body { flex-direction: row; }
-            .sidebar { width: 340px; height: 100vh; border-right: 1px solid #334155; border-bottom: none; overflow-y: auto; padding: 1.5rem; }
+            .sidebar {
+                width: 340px;
+                height: 100vh;
+                border-right: 1px solid #334155;
+                border-bottom: none;
+                overflow-y: auto;
+                padding: 1.5rem;
+            }
             .workzone { height: 100vh; }
         }
-        .stat-box { background: #334155; padding: 0.4rem; border-radius: 0.5rem; border: 1px solid #475569; text-align: center; }
-        .nav-btn { background: #475569; width: 44px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: white; transition: background 0.2s; }
-        .nav-btn:active { background: #6366f1; transform: scale(0.9); }
-        .btn-active { outline: 3px solid #6366f1; outline-offset: 2px; }
+        .stat-box {
+            background: #334155;
+            padding: 0.4rem;
+            border-radius: 0.5rem;
+            border: 1px solid #475569;
+            text-align: center;
+        }
+        .nav-btn {
+            background: #475569;
+            width: 44px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            color: white;
+            transition: background 0.2s;
+        }
+        .nav-btn:active {
+            background: #6366f1;
+            transform: scale(0.9);
+        }
+        .btn-active {
+            outline: 3px solid #6366f1;
+            outline-offset: 2px;
+        }
+        .cam-panel {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.92);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem;
+        }
+        .cam-card {
+            width: min(96vw, 560px);
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 0.75rem;
+        }
+        #cameraPreview {
+            width: 100%;
+            border-radius: 10px;
+            background: #000;
+            max-height: 62dvh;
+            object-fit: contain;
+        }
+        .cam-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.65rem;
+        }
+        .cam-btn {
+            border: none;
+            border-radius: 10px;
+            padding: 0.7rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .cam-capture { background: #16a34a; }
+        .cam-close { background: #475569; }
+        .cam-note {
+            margin-top: 0.45rem;
+            color: #cbd5e1;
+            font-size: 11px;
+            text-align: center;
+        }
+        @media (max-width: 767px) {
+            .sidebar {
+                max-height: 46dvh;
+                overflow-y: auto;
+            }
+            .workzone {
+                height: 54dvh;
+            }
+            .nav-btn {
+                width: 40px;
+                height: 36px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="sidebar flex flex-col gap-4">
         <h1 class="text-lg font-bold text-white border-b border-slate-700 pb-2 hidden md:block text-center">ASSET Counter</h1>
-        
+
         <div class="grid grid-cols-3 gap-2">
             <div class="stat-box"><p class="text-[9px] uppercase text-slate-400">Total</p><p class="text-lg font-bold" id="totalCount">0</p></div>
             <div class="stat-box"><p class="text-[9px] uppercase text-green-400">Live</p><p class="text-lg font-bold" id="liveCount">0</p></div>
@@ -84,22 +193,42 @@
                 <button onclick="undo()" class="flex-1 py-2 bg-slate-600 rounded text-xs font-bold uppercase italic text-white">Undo</button>
                 <button onclick="saveImage()" class="flex-1 py-2 bg-indigo-600 rounded text-xs font-bold uppercase text-white">Save</button>
             </div>
+            <div class="flex gap-2">
+                <button onclick="openCameraPanel()" class="flex-1 py-2 bg-cyan-700 rounded text-xs font-bold uppercase text-white">Open Camera</button>
+                <button onclick="triggerMobileCapture()" class="flex-1 py-2 bg-emerald-700 rounded text-xs font-bold uppercase text-white">Camera Upload</button>
+            </div>
             <button onclick="clearAll()" class="w-full py-2 bg-red-900/30 hover:bg-red-700 border border-red-500 rounded text-[10px] font-bold uppercase text-red-200 transition-colors">
                 Clear All Points
             </button>
         </div>
-        
-        <input type="file" id="imageInput" class="block w-full text-[10px] text-slate-500 file:mr-2 file:bg-slate-600 file:text-white file:rounded-full file:border-0 file:px-2 cursor-pointer">
+
+        <input type="file" id="imageInput" accept="image/*" class="block w-full text-[10px] text-slate-500 file:mr-2 file:bg-slate-600 file:text-white file:rounded-full file:border-0 file:px-2 cursor-pointer">
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
     </div>
 
     <div class="workzone" id="workzone">
         <canvas id="eggCanvas"></canvas>
     </div>
 
+    <div id="cameraPanel" class="cam-panel">
+        <div class="cam-card">
+            <video id="cameraPreview" autoplay playsinline muted></video>
+            <div class="cam-actions">
+                <button class="cam-btn cam-capture" onclick="captureFromCamera()">Capture Photo</button>
+                <button class="cam-btn cam-close" onclick="closeCameraPanel()">Close</button>
+            </div>
+            <p class="cam-note">Use this on mobile browser with camera permission enabled.</p>
+        </div>
+    </div>
+
     <script>
         const canvas = document.getElementById('eggCanvas');
         const workzone = document.getElementById('workzone');
         const ctx = canvas.getContext('2d');
+        const imageInput = document.getElementById('imageInput');
+        const cameraInput = document.getElementById('cameraInput');
+        const cameraPanel = document.getElementById('cameraPanel');
+        const cameraPreview = document.getElementById('cameraPreview');
         let points = [];
         let mode = 'live';
         let img = new Image();
@@ -107,25 +236,62 @@
         let isPanning = false;
         let initialDist = 0;
         let lastTouchX = 0, lastTouchY = 0;
+        let drawQueued = false;
+        let cameraStream = null;
+        let liveCount = 0;
+        let deadCount = 0;
 
-        document.getElementById('imageInput').onchange = function(e) {
+        function scheduleDraw() {
+            if (drawQueued) return;
+            drawQueued = true;
+            requestAnimationFrame(() => {
+                drawQueued = false;
+                draw();
+            });
+        }
+
+        function updateCounterUI() {
+            document.getElementById('liveCount').innerText = liveCount;
+            document.getElementById('deadCount').innerText = deadCount;
+            document.getElementById('totalCount').innerText = liveCount + deadCount;
+        }
+
+        imageInput.onchange = function(e) {
+            if (!e.target.files || !e.target.files[0]) return;
             const reader = new FileReader();
             reader.onload = (event) => { img.src = event.target.result; };
             reader.readAsDataURL(e.target.files[0]);
         };
 
-        img.onload = () => { resetView(); draw(); };
+        cameraInput.onchange = function(e) {
+            if (!e.target.files || !e.target.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = (event) => { img.src = event.target.result; };
+            reader.readAsDataURL(e.target.files[0]);
+        };
 
-        function adjustZoom(delta) { 
-            scale = Math.min(Math.max(0.1, scale + delta), 5.0); 
-            updateDisplay(); 
+        img.onload = () => {
+            points = [];
+            liveCount = 0;
+            deadCount = 0;
+            updateCounterUI();
+            resetView();
+            scheduleDraw();
+        };
+
+        function adjustZoom(delta) {
+            scale = Math.min(Math.max(0.1, scale + delta), 5.0);
+            updateDisplay();
         }
 
-        function pan(dx, dy) { workzone.scrollLeft += dx; workzone.scrollTop += dy; }
+        function pan(dx, dy) {
+            workzone.scrollLeft += dx;
+            workzone.scrollTop += dy;
+        }
 
         function resetView() {
             scale = 1.0;
-            if(img.src) {
+            if (img.src) {
                 canvas.width = img.width;
                 canvas.height = img.height;
                 updateDisplay();
@@ -139,18 +305,75 @@
             canvas.style.width = (img.width * scale) + "px";
             canvas.style.height = (img.height * scale) + "px";
             document.getElementById('zoomVal').innerText = Math.round(scale * 100) + "%";
-            draw();
+            scheduleDraw();
+        }
+
+        function triggerMobileCapture() {
+            cameraInput.click();
+        }
+
+        async function openCameraPanel() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Camera API not supported on this browser. Use Camera Upload button.');
+                return;
+            }
+
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: { ideal: 'environment' },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                cameraPreview.srcObject = cameraStream;
+                cameraPanel.style.display = 'flex';
+            } catch (err) {
+                alert('Unable to access camera. Check browser permission and use HTTPS/localhost.');
+            }
+        }
+
+        function closeCameraPanel() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach((track) => track.stop());
+                cameraStream = null;
+            }
+            cameraPreview.srcObject = null;
+            cameraPanel.style.display = 'none';
+        }
+
+        function captureFromCamera() {
+            if (!cameraPreview.videoWidth || !cameraPreview.videoHeight) return;
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = cameraPreview.videoWidth;
+            tempCanvas.height = cameraPreview.videoHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(cameraPreview, 0, 0, tempCanvas.width, tempCanvas.height);
+            img.src = tempCanvas.toDataURL('image/jpeg', 0.92);
+            closeCameraPanel();
         }
 
         function setMode(m) {
             mode = m;
-            document.getElementById('btnLive').className = m === 'live' ? 'flex-1 py-3 rounded-lg font-bold text-xs bg-green-600 btn-active uppercase shadow-lg' : 'flex-1 py-3 rounded-lg font-bold text-xs bg-slate-700 uppercase shadow-lg';
-            document.getElementById('btnDead').className = m === 'dead' ? 'flex-1 py-3 rounded-lg font-bold text-xs bg-red-600 btn-active uppercase shadow-lg' : 'flex-1 py-3 rounded-lg font-bold text-xs bg-slate-700 uppercase shadow-lg';
+            document.getElementById('btnLive').className = m === 'live'
+                ? 'flex-1 py-3 rounded-lg font-bold text-xs bg-green-600 btn-active uppercase shadow-lg'
+                : 'flex-1 py-3 rounded-lg font-bold text-xs bg-slate-700 uppercase shadow-lg';
+            document.getElementById('btnDead').className = m === 'dead'
+                ? 'flex-1 py-3 rounded-lg font-bold text-xs bg-red-600 btn-active uppercase shadow-lg'
+                : 'flex-1 py-3 rounded-lg font-bold text-xs bg-slate-700 uppercase shadow-lg';
         }
 
         function clearAll() {
             if (points.length === 0) return;
-            if (confirm("Clear ALL marked points?")) { points = []; draw(); }
+            if (confirm('Clear ALL marked points?')) {
+                points = [];
+                liveCount = 0;
+                deadCount = 0;
+                updateCounterUI();
+                scheduleDraw();
+            }
         }
 
         canvas.addEventListener('mousedown', (e) => {
@@ -160,45 +383,68 @@
         canvas.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
                 isPanning = true;
-                initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                initialDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
                 lastTouchX = (e.touches[0].pageX + e.touches[1].pageX) / 2;
                 lastTouchY = (e.touches[0].pageY + e.touches[1].pageY) / 2;
             } else if (e.touches.length === 1) {
-                e.preventDefault(); 
+                e.preventDefault();
                 handleInput(e.touches[0].clientX, e.touches[0].clientY);
             }
-        }, {passive: false});
+        }, { passive: false });
 
         canvas.addEventListener('touchmove', (e) => {
             if (e.touches.length === 2 && isPanning) {
                 e.preventDefault();
-                const currentDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                const currentDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
                 scale = Math.min(Math.max(0.1, scale * (currentDist / initialDist)), 5.0);
                 updateDisplay();
                 initialDist = currentDist;
                 const currentX = (e.touches[0].pageX + e.touches[1].pageX) / 2;
                 const currentY = (e.touches[0].pageY + e.touches[1].pageY) / 2;
                 pan(-(currentX - lastTouchX), -(currentY - lastTouchY));
-                lastTouchX = currentX; lastTouchY = currentY;
+                lastTouchX = currentX;
+                lastTouchY = currentY;
             }
-        }, {passive: false});
+        }, { passive: false });
 
-        canvas.addEventListener('touchend', (e) => {
-            if (e.touches.length < 2) isPanning = false;
+        canvas.addEventListener('touchend', () => {
+            isPanning = false;
         });
 
         function handleInput(clientX, clientY) {
             if (!img.src || isPanning) return;
             const rect = canvas.getBoundingClientRect();
-            points.push({ 
-                x: (clientX - rect.left) / scale, 
-                y: (clientY - rect.top) / scale, 
-                type: mode 
+            points.push({
+                x: (clientX - rect.left) / scale,
+                y: (clientY - rect.top) / scale,
+                type: mode
             });
-            draw();
+            if (mode === 'live') {
+                liveCount += 1;
+            } else {
+                deadCount += 1;
+            }
+            updateCounterUI();
+            scheduleDraw();
         }
 
-        function undo() { points.pop(); draw(); }
+        function undo() {
+            const removed = points.pop();
+            if (!removed) return;
+            if (removed.type === 'live') {
+                liveCount = Math.max(0, liveCount - 1);
+            } else {
+                deadCount = Math.max(0, deadCount - 1);
+            }
+            updateCounterUI();
+            scheduleDraw();
+        }
 
         function draw() {
             if (!img.src) return;
@@ -210,31 +456,27 @@
             document.getElementById('sizeVal').innerText = dotSize;
             document.getElementById('borderVal').innerText = borderSize;
 
-            points.forEach(p => {
-                ctx.beginPath(); 
-                ctx.arc(p.x, p.y, parseInt(dotSize), 0, Math.PI * 2);
-                ctx.fillStyle = p.type === 'live' ? '#10b981' : '#ef4444'; 
+            points.forEach((p) => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, parseInt(dotSize, 10), 0, Math.PI * 2);
+                ctx.fillStyle = p.type === 'live' ? '#10b981' : '#ef4444';
                 ctx.fill();
                 if (borderSize > 0) {
-                    ctx.strokeStyle = "white"; 
-                    ctx.lineWidth = parseInt(borderSize); 
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = parseInt(borderSize, 10);
                     ctx.stroke();
                 }
             });
 
-            const live = points.filter(p => p.type === 'live').length;
-            const dead = points.filter(p => p.type === 'dead').length;
-            document.getElementById('liveCount').innerText = live;
-            document.getElementById('deadCount').innerText = dead;
-            document.getElementById('totalCount').innerText = points.length;
+            updateCounterUI();
         }
 
-        function saveImage() { 
-            if(!img.src) return; 
-            const link = document.createElement('a'); 
-            link.download = 'ASSET_counted_eggs.png'; 
-            link.href = canvas.toDataURL(); 
-            link.click(); 
+        function saveImage() {
+            if (!img.src) return;
+            const link = document.createElement('a');
+            link.download = 'ASSET_counted_eggs.png';
+            link.href = canvas.toDataURL();
+            link.click();
         }
 
         window.addEventListener('keydown', (e) => {
@@ -243,9 +485,25 @@
             if (k.toLowerCase() === 'd') setMode('dead');
             if (k.toLowerCase() === 'u') undo();
             if (k.toLowerCase() === 's') saveImage();
-            if (k === 'ArrowUp') pan(0, -60); if (k === 'ArrowDown') pan(0, 60);
-            if (k === 'ArrowLeft') pan(-60, 0); if (k === 'ArrowRight') pan(60, 0);
+            if (k === 'ArrowUp') pan(0, -60);
+            if (k === 'ArrowDown') pan(0, 60);
+            if (k === 'ArrowLeft') pan(-60, 0);
+            if (k === 'ArrowRight') pan(60, 0);
+        });
+
+        window.addEventListener('beforeunload', () => {
+            closeCameraPanel();
         });
     </script>
 </body>
 </html>
+"""
+
+
+@app.route('/')
+def index():
+    return render_template_string(HTML_TEMPLATE)
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
