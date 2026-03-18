@@ -8,7 +8,7 @@
     <style>
         body { 
             background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; 
-            margin: 0; height: 100vh; width: 100vw; overflow: hidden; display: flex; flex-direction: column;
+            margin: 0; min-height: 100dvh; width: 100vw; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column;
         }
         .sidebar { 
             background-color: #1e293b; padding: 0.75rem; z-index: 1000; 
@@ -75,6 +75,21 @@
             color: #cbd5e1;
             font-size: 11px;
             text-align: center;
+        }
+        @media (max-width: 767px) {
+            body {
+                height: auto;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .sidebar {
+                overflow: visible;
+                max-height: none;
+            }
+            .workzone {
+                min-height: 58dvh;
+                overflow: auto;
+            }
         }
     </style>
 </head>
